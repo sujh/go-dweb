@@ -1,40 +1,31 @@
 package dweb
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 )
 
 type engine struct {
-	router map[string]HandlerFunc
+	router router
 }
 
-type HandlerFunc func(http.ResponseWriter, *http.Request)
+type HandlerFunc func(c *Context)
 
 func New() *engine {
-	return &engine{router: make(map[string]HandlerFunc)}
-}
-
-func (e *engine) addRoute(verb string, path string, handler HandlerFunc) {
-	e.router[verb+"-"+path] = handler
+	return &engine{router: *newRouter()}
 }
 
 func (e *engine) GET(path string, handler HandlerFunc) {
-	e.addRoute("GET", path, handler)
+	e.router.add("GET", path, handler)
 }
 
 func (e *engine) POST(path string, handler HandlerFunc) {
-	e.addRoute("POST", path, handler)
+	e.router.add("POST", path, handler)
 }
 
 func (e *engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if handler, ok := e.router[r.Method+"-"+r.URL.Path]; ok {
-		handler(w, r)
-	} else {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "NOT FOUND: %s", r.URL)
-	}
+	c := newContext(w, r)
+	e.router.handle(c)
 }
 
 func (e *engine) Run(port string) {
