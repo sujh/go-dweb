@@ -27,15 +27,17 @@ func (r *router) add(method string, pattern string, handler HandlerFunc) {
 
 func (r *router) handle(c *Context) {
 	node, params := r.getRoute(c.Method, c.Path)
+	var handler HandlerFunc
 	if node != nil {
 		c.Params = params
-		key := routeKey(c.Method, node.pattern)
-		if handler, ok := r.handlers[key]; ok {
-			handler(c)
-			return
+		handler = r.handlers[routeKey(c.Method, node.pattern)]
+	} else {
+		handler = func(c *Context) {
+			c.String(http.StatusNotFound, "404 not found: %s for %s\n", c.Method, c.Path)
 		}
 	}
-	c.String(http.StatusNotFound, "404 not found: %s for %s\n", c.Method, c.Path)
+	c.handlers = append(c.handlers, handler)
+	c.Yield()
 }
 
 func parsePattern(pattern string) []string {

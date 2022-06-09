@@ -3,6 +3,8 @@ package dweb
 import (
 	"log"
 	"net/http"
+	"strings"
+	"time"
 )
 
 type engine struct {
@@ -21,6 +23,11 @@ func New() *engine {
 
 func (e *engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := newContext(w, r)
+	for _, g := range e.groups {
+		if strings.HasPrefix(r.URL.Path, g.prefix) {
+			c.handlers = append(c.handlers, g.middlewares...)
+		}
+	}
 	e.topRouterGroup.router.handle(c)
 }
 
@@ -36,4 +43,11 @@ func (e *engine) GenerateAndRecordRouterGroup(parent *routerGroup, prefix string
 	newGroup := parent.Group(prefix)
 	e.groups = append(e.groups, newGroup)
 	return newGroup
+}
+
+// Default middleware
+func Logger(c *Context) {
+	t := time.Now()
+	c.Yield()
+	log.Printf("[%d] %s in %v", c.StatusCode, c.r.RequestURI, time.Since(t))
 }

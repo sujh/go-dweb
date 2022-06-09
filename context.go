@@ -7,22 +7,26 @@ import (
 )
 
 type Context struct {
-	w          http.ResponseWriter
-	r          *http.Request
-	Path       string
-	Method     string
-	StatusCode int
-	Params     map[string]string
+	w            http.ResponseWriter
+	r            *http.Request
+	Path         string
+	Method       string
+	StatusCode   int
+	Params       map[string]string
+	handlers     []HandlerFunc
+	handlerDepth int
 }
 
 type H map[string]any
 
 func newContext(w http.ResponseWriter, r *http.Request) *Context {
 	return &Context{
-		w:      w,
-		r:      r,
-		Path:   r.URL.Path,
-		Method: r.Method,
+		w:            w,
+		r:            r,
+		Path:         r.URL.Path,
+		Method:       r.Method,
+		handlers:     make([]HandlerFunc, 0),
+		handlerDepth: 0,
 	}
 }
 
@@ -71,4 +75,18 @@ func (c *Context) SetHeader(key string, value string) {
 
 func (c *Context) Param(key string) string {
 	return c.Params[key]
+}
+
+func (c *Context) Fail(err string) {
+	c.handlerDepth = len(c.handlers)
+	c.JSON(500, H{"message": err})
+}
+
+func (c *Context) Yield() {
+	for c.handlerDepth < len(c.handlers) {
+		m := c.handlers[c.handlerDepth]
+		c.handlerDepth++
+		m(c)
+
+	}
 }

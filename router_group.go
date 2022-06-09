@@ -29,3 +29,7 @@ func (g *routerGroup) Group(prefix string) *routerGroup {
 	}
 	return &cg
 }
+
+func (g *routerGroup) Use(mid HandlerFunc) {
+	g.middlewares = append(g.middlewares, mid)
+}
