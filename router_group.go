@@ -1,5 +1,10 @@
 package dweb
 
+import (
+	"net/http"
+	"path"
+)
+
 type routerGroup struct {
 	prefix      string
 	middlewares []HandlerFunc
@@ -32,4 +37,23 @@ func (g *routerGroup) Group(prefix string) *routerGroup {
 
 func (g *routerGroup) Use(mid HandlerFunc) {
 	g.middlewares = append(g.middlewares, mid)
+}
+
+func (g *routerGroup) createStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc {
+	absolutePath := path.Join(g.prefix, relativePath)
+	fileHandler := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(c *Context) {
+		file := c.Param("filepath")
+		if _, e := fs.Open(file); e != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		fileHandler.ServeHTTP(c.w, c.r)
+	}
+}
+
+func (g *routerGroup) Static(relativePath string, root string) {
+	handler := g.createStaticHandler(relativePath, http.Dir(root))
+	urlPattern := path.Join(relativePath, "/*filepath")
+	g.GET(urlPattern, handler)
 }

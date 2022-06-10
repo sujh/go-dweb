@@ -87,6 +87,5 @@ func (c *Context) Yield() {
 		m := c.handlers[c.handlerDepth]
 		c.handlerDepth++
 		m(c)
-
 	}
 }
