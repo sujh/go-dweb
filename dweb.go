@@ -1,6 +1,7 @@
 package dweb
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -10,6 +11,8 @@ import (
 type engine struct {
 	groups         []*routerGroup
 	topRouterGroup *routerGroup
+	htmlTemplate   *template.Template
+	funcMap        template.FuncMap
 }
 
 type HandlerFunc func(c *Context)
@@ -45,9 +48,21 @@ func (e *engine) GenerateAndRecordRouterGroup(parent *routerGroup, prefix string
 	return newGroup
 }
 
+func (e *engine) LoadHTMLGlob(pattern string) {
+	e.htmlTemplate = template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
+}
+
 // Default middleware
 func Logger(c *Context) {
 	t := time.Now()
 	c.Yield()
 	log.Printf("[%d] %s in %v", c.StatusCode, c.r.RequestURI, time.Since(t))
+}
+
+func (e *engine) TemplateFor(name string) *template.Template {
+	return e.htmlTemplate.Lookup(name)
+}
+
+func (e *engine) SetFuncMap(funcMap template.FuncMap) {
+	e.funcMap = funcMap
 }

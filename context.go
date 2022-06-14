@@ -3,6 +3,7 @@ package dweb
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 )
 
@@ -35,10 +36,12 @@ func (c *Context) Data(status int, data []byte) {
 	c.w.Write(data)
 }
 
-func (c *Context) HTML(status int, content string) {
+func (c *Context) HTML(status int, t *template.Template, data any) {
 	c.Status(status)
 	c.SetHeader("Content-Type", "text/html")
-	c.w.Write([]byte(content))
+	if e := t.Execute(c.w, data); e != nil {
+		c.Fail(e.Error())
+	}
 }
 
 func (c *Context) String(status int, format string, contents ...any) {
